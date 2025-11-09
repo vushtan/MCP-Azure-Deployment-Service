@@ -25,13 +25,13 @@ export default {
     '!src/index.ts'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: ['text', 'text-summary', 'lcov', 'html', 'json', 'cobertura'],
   coverageThreshold: {
     global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70
+      branches: 85,
+      functions: 100,
+      lines: 90,
+      statements: 90
     }
   },
   testTimeout: 30000,

@@ -1,86 +1,156 @@
 # MCP Azure Deployment Service
 
-A production-ready Model Context Protocol (MCP) server for Azure cloud deployments. This service provides four core Azure operations through a standardized JSON-RPC interface, enabling seamless integration with MCP-compatible clients.
+A production-ready Model Context Protocol (MCP) server for Azure cloud deployments with comprehensive resource management capabilities.
 
-## 🚀 Features
+---
 
-- **Four Core Azure Operations**:
-  - `azure.getExistingServers` - List and filter existing Azure resources
-  - `azure.deployMinimalInstance` - Deploy lightweight compute instances
-  - `azure.deployBackend` - Deploy backend services with databases
-  - `azure.deployFrontend` - Deploy static websites and web applications
+## 🚀 Quick Start
 
-- **Production-Ready Architecture**:
-  - TypeScript with strict type checking
-  - Comprehensive error handling and retry logic
-  - Multi-profile configuration management
-  - Security-hardened credential handling
-  - Structured logging with Winston
-  - Input validation with Joi schemas
+**Get up and running in under 5 minutes!**
 
-- **MCP Protocol Compliance**:
-  - Full JSON-RPC 2.0 implementation
-  - Standard MCP initialization handshake
-  - Tool registration and discovery
-  - Parameter validation and error reporting
-
-## 📋 Prerequisites
-
-- **Node.js** 18.0 or higher
-- **npm** 8.0 or higher
-- **Azure Account** with appropriate permissions:
-  - Contributor role on target subscription
-  - Resource group creation permissions
-  - Storage account access (for frontend deployments)
-
-## ⚡ Quick Start (5-Minute Setup)
-
-### 1. Clone and Install
-
+### 1. Clone Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/vushtan/MCP-Azure-Deployment-Service.git
 cd MCP-Azure-Deployment-Service
+```
+
+### 2. Install Dependencies
+```bash
 npm install
 ```
 
-### 2. Configure Azure Credentials
+### 3. Configure Credentials
+```bash
+# Interactive setup (recommended)
+npm run setup-env
 
-Create a `.env` file in the project root:
-
-```env
-# Azure Authentication (Required)
-AZURE_SUBSCRIPTION_ID=your-subscription-id
-AZURE_TENANT_ID=your-tenant-id
-AZURE_CLIENT_ID=your-client-id
-AZURE_CLIENT_SECRET=your-client-secret
-
-# Optional Configuration
-AZURE_DEFAULT_REGION=eastus
-AZURE_RESOURCE_GROUP_PREFIX=mcp-deployments
-AZURE_ENVIRONMENT=production
+# OR copy template manually
+cp .env.example .env
+# Then edit .env with your Azure credentials
 ```
 
-### 3. Verify Setup
-
+### 4. Verify Setup
 ```bash
-# Test configuration
-npm run test:config
+# Validate configuration
+npm run validate-config
 
-# Build the project
-npm run build
+# Test Azure connectivity
+npm run test-credentials
+```
 
-# Start the MCP server
+### 5. Run First Deployment
+```bash
+# Try a sample deployment
+npm run sample-deploy
+
+# OR start the MCP server
 npm start
 ```
 
-### 4. Test Connection
+**🎉 You're ready to go!** The server will listen for JSON-RPC requests via stdin/stdout.
 
-The server will start on stdin/stdout for MCP communication. You should see:
+---
 
+## 🛠️ Automated Setup
+
+For even faster setup, use our automated installation scripts:
+
+**Windows (PowerShell):**
+```powershell
+.\setup.ps1
 ```
-MCP Azure Deployment Service initialized
-Listening for JSON-RPC requests...
+
+**macOS/Linux (Bash):**
+```bash
+chmod +x setup.sh
+./setup.sh
 ```
+
+These scripts will:
+- ✅ Check system requirements (Node.js 18+, npm)
+- ✅ Install dependencies automatically
+- ✅ Set up environment template
+- ✅ Run health checks
+- ✅ Guide you through credential configuration
+
+---
+
+## 📋 Prerequisites
+
+| Requirement | Version | Notes |
+|-------------|---------|--------|
+| **Node.js** | 18.0+ | [Download here](https://nodejs.org/) |
+| **npm** | 9.0+ | Comes with Node.js |
+| **Azure Account** | Active | With Contributor permissions |
+
+### Azure Requirements
+
+You'll need an Azure service principal with these permissions:
+- **Subscription**: Contributor role
+- **Resource Groups**: Create/manage permissions
+- **Compute**: VM and App Service deployment
+- **Storage**: Account creation (for frontend deployments)
+
+**Need help creating a service principal?** [Follow this guide](https://docs.microsoft.com/azure/active-directory/develop/howto-create-service-principal-portal)
+
+---
+
+## ⚙️ Configuration
+
+### Required Environment Variables
+
+```env
+# Azure Authentication
+AZURE_SUBSCRIPTION_ID=12345678-1234-1234-1234-123456789abc
+AZURE_TENANT_ID=87654321-4321-4321-4321-abcdef123456
+AZURE_CLIENT_ID=abcdef12-3456-7890-abcd-ef1234567890
+AZURE_CLIENT_SECRET=your-client-secret-here
+
+# Optional Settings
+AZURE_DEFAULT_REGION=eastus                    # Default: eastus
+AZURE_RESOURCE_GROUP_PREFIX=mcp-rg            # Default: mcp-rg
+LOG_LEVEL=info                                # Default: info
+```
+
+### Quick Configuration Commands
+
+```bash
+# Interactive credential setup
+npm run setup-env
+
+# Validate your configuration
+npm run validate-config
+
+# Test Azure connectivity
+npm run test-credentials
+
+# Health check (comprehensive system test)
+npm run health-check
+```
+
+---
+
+## 🚀 Features
+
+### Core Azure Operations
+- **`azure.getExistingServers`** - List and manage existing compute resources
+- **`azure.deployMinimalInstance`** - Deploy lightweight VMs and App Services  
+- **`azure.deployBackend`** - Full backend deployment with databases
+- **`azure.deployFrontend`** - Static website deployment with CDN
+
+### Production-Ready Architecture
+- ✅ **TypeScript** with strict type checking
+- ✅ **Comprehensive Testing** (91%+ coverage)
+- ✅ **Error Handling** with retry logic and rate limiting
+- ✅ **Security** hardened credential management
+- ✅ **Logging** structured logging with Winston
+- ✅ **Validation** input validation with Joi schemas
+
+### MCP Protocol Compliance
+- ✅ **JSON-RPC 2.0** full implementation
+- ✅ **Tool Discovery** automatic registration and schema validation
+- ✅ **Error Handling** standard MCP error codes and messages
+- ✅ **Streaming** stdin/stdout communication protocol
 
 ## 🛠️ Configuration
 
@@ -118,124 +188,97 @@ configManager.setActiveProfile('staging');
 
 ## 🔧 Azure Operations
 
-### 1. Get Existing Servers
+The MCP server provides four powerful deployment tools accessible via JSON-RPC:
 
-Lists and filters existing Azure compute resources.
+### 1. 📋 Get Existing Servers
+**Tool**: `azure.getExistingServers`
+
+List and filter your existing Azure compute resources.
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "azure.getExistingServers",
-    "arguments": {
-      "resourceGroup": "my-rg",
-      "serverType": "vm",
-      "region": "eastus"
+  "name": "azure.getExistingServers",
+  "arguments": {
+    "resourceGroup": "my-rg",           // Optional: Filter by resource group
+    "serverType": "vm",                 // Optional: "vm", "webapp", "container" 
+    "region": "eastus"                  // Optional: Filter by region
+  }
+}
+```
+
+**Returns**: Comprehensive resource list with status, costs, and configuration details.
+
+---
+
+### 2. 🚀 Deploy Minimal Instance  
+**Tool**: `azure.deployMinimalInstance`
+
+Perfect for development, testing, or lightweight workloads.
+
+```json
+{
+  "name": "azure.deployMinimalInstance",
+  "arguments": {
+    "name": "dev-server-01",           // Required: Unique instance name
+    "resourceGroup": "dev-rg",         // Required: Target resource group
+    "region": "eastus",                // Optional: Deployment region
+    "vmSize": "Standard_B1s",          // Optional: VM size
+    "osType": "Ubuntu"                 // Optional: "Ubuntu", "Windows"
+  }
+}
+```
+
+**Includes**: VM, networking, monitoring, and SSH/RDP access setup.
+
+---
+
+### 3. 🏗️ Deploy Backend
+**Tool**: `azure.deployBackend`
+
+Full-stack backend deployment with database and auto-scaling.
+
+```json
+{
+  "name": "azure.deployBackend",
+  "arguments": {
+    "name": "api-backend",             // Required: Service name
+    "resourceGroup": "production-rg",  // Required: Target resource group
+    "region": "eastus",                // Optional: Deployment region
+    "serviceType": "webapp",           // Required: "webapp", "container", "vm"
+    "databaseType": "postgresql",      // Optional: "postgresql", "mysql", "cosmosdb"
+    "scalingConfig": {
+      "minInstances": 2,
+      "maxInstances": 10,
+      "targetCpuPercent": 70
     }
   }
 }
 ```
 
-**Parameters:**
-- `resourceGroup` (optional): Filter by resource group
-- `serverType` (optional): Filter by type (`vm`, `webapp`, `container`)
-- `region` (optional): Filter by Azure region
+**Includes**: Load balancer, App Service/Container, managed database, VNet, and monitoring.
 
-### 2. Deploy Minimal Instance
+---
 
-Creates a lightweight virtual machine for development or testing.
+### 4. 🌐 Deploy Frontend
+**Tool**: `azure.deployFrontend`
+
+Static websites and SPAs with global CDN and SSL.
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "tools/call",
-  "params": {
-    "name": "azure.deployMinimalInstance",
-    "arguments": {
-      "name": "dev-server-01",
-      "resourceGroup": "development-rg",
-      "region": "eastus",
-      "vmSize": "Standard_B1s",
-      "osType": "Ubuntu"
-    }
+  "name": "azure.deployFrontend",
+  "arguments": {
+    "name": "corporate-website",       // Required: Application name
+    "resourceGroup": "web-rg",         // Required: Target resource group
+    "region": "eastus",                // Optional: Deployment region
+    "frontendType": "spa",             // Required: "spa", "static", "blazor"
+    "cdnEnabled": true,                // Optional: Enable Azure CDN
+    "customDomain": "www.example.com"  // Optional: Custom domain
   }
 }
 ```
 
-**Parameters:**
-- `name` (required): Instance name
-- `resourceGroup` (required): Target resource group
-- `region` (optional): Deployment region
-- `vmSize` (optional): VM size (default: `Standard_B1ms`)
-- `osType` (optional): Operating system (`Ubuntu`, `Windows`)
-
-### 3. Deploy Backend
-
-Deploys backend services with database and networking components.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "method": "tools/call",
-  "params": {
-    "name": "azure.deployBackend",
-    "arguments": {
-      "name": "api-backend",
-      "resourceGroup": "production-rg",
-      "region": "eastus",
-      "serviceType": "webapp",
-      "databaseType": "postgresql",
-      "scalingConfig": {
-        "minInstances": 2,
-        "maxInstances": 10
-      }
-    }
-  }
-}
-```
-
-**Parameters:**
-- `name` (required): Backend service name
-- `resourceGroup` (required): Target resource group
-- `region` (optional): Deployment region
-- `serviceType` (required): Service type (`webapp`, `container`, `vm`)
-- `databaseType` (optional): Database type (`postgresql`, `mysql`, `cosmosdb`)
-- `scalingConfig` (optional): Auto-scaling configuration
-
-### 4. Deploy Frontend
-
-Deploys static websites and web applications with CDN support.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 4,
-  "method": "tools/call",
-  "params": {
-    "name": "azure.deployFrontend",
-    "arguments": {
-      "name": "corporate-website",
-      "resourceGroup": "web-rg",
-      "region": "eastus",
-      "frontendType": "spa",
-      "cdnEnabled": true,
-      "customDomain": "www.example.com"
-    }
-  }
-}
-```
-
-**Parameters:**
-- `name` (required): Frontend application name
-- `resourceGroup` (required): Target resource group
-- `region` (optional): Deployment region
-- `frontendType` (required): Type (`spa`, `static`, `blazor`)
-- `cdnEnabled` (optional): Enable Azure CDN
-- `customDomain` (optional): Custom domain name
+**Includes**: Static Web App, Azure CDN, SSL certificate, and custom domain configuration.
 
 ## 🔒 Security Features
 

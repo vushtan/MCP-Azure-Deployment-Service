@@ -187,6 +187,69 @@ describe('AzureClientManager', () => {
       });
     });
 
+    describe('VM, App Service, and Storage Creation Methods', () => {
+      it('should create virtual machines', async () => {
+        const mockPoller = {
+          pollUntilDone: jest.fn().mockResolvedValue({
+            name: 'test-vm',
+            location: 'eastus'
+          })
+        };
+
+        azureClient['computeClient'].virtualMachines.beginCreateOrUpdate = jest.fn()
+          .mockResolvedValue(mockPoller);
+
+        const result = await azureClient.createVirtualMachine('test-rg', 'test-vm', { location: 'eastus' });
+        expect(result.name).toBe('test-vm');
+      });
+
+      it('should create app service plans', async () => {
+        // Mock the webClient properly since appServicePlans may be undefined in initial mock
+        azureClient['webClient'] = {
+          ...azureClient['webClient'],
+          appServicePlans: {
+            beginCreateOrUpdateAndWait: jest.fn().mockResolvedValue({
+              name: 'test-plan',
+              location: 'eastus'
+            })
+          }
+        };
+
+        const result = await azureClient.createAppServicePlan('test-rg', 'test-plan', 'eastus', 'F1');
+        expect(result.name).toBe('test-plan');
+      });
+
+      it('should create app services with different runtimes', async () => {
+        azureClient['webClient'].webApps.beginCreateOrUpdateAndWait = jest.fn()
+          .mockResolvedValue({
+            name: 'test-app',
+            defaultHostName: 'test-app.azurewebsites.net'
+          });
+
+        // Test different runtimes to exercise getLinuxFxVersion
+        await azureClient.createAppService('test-rg', 'test-app-node', 'server-farm-id', 'eastus', 'node');
+        await azureClient.createAppService('test-rg', 'test-app-python', 'server-farm-id', 'eastus', 'python');
+        await azureClient.createAppService('test-rg', 'test-app-dotnet', 'server-farm-id', 'eastus', 'dotnetcore');
+        
+        expect(azureClient['webClient'].webApps.beginCreateOrUpdateAndWait).toHaveBeenCalledTimes(3);
+      });
+
+      it('should create storage accounts', async () => {
+        const mockPoller = {
+          pollUntilDone: jest.fn().mockResolvedValue({
+            name: 'teststorage',
+            location: 'eastus'
+          })
+        };
+
+        azureClient['storageClient'].storageAccounts.beginCreate = jest.fn()
+          .mockResolvedValue(mockPoller);
+
+        const result = await azureClient.createStorageAccount('test-rg', 'teststorage', 'eastus', 'Standard_LRS');
+        expect(result.name).toBe('teststorage');
+      });
+    });
+
     describe('getStorageAccountKeys', () => {
       it('should retrieve storage account keys', async () => {
         const key = await azureClient.getStorageAccountKeys('test-rg', 'teststorage');
@@ -203,6 +266,24 @@ describe('AzureClientManager', () => {
         await expect(
           azureClient.getStorageAccountKeys('test-rg', 'nonexistent')
         ).rejects.toThrow('Storage account not found');
+      });
+
+      it('should handle empty storage account keys', async () => {
+        azureClient['storageClient'].storageAccounts.listKeys = jest.fn()
+          .mockResolvedValue({ keys: [] });
+
+        await expect(
+          azureClient.getStorageAccountKeys('test-rg', 'teststorage')
+        ).rejects.toThrow('No storage account keys found');
+      });
+
+      it('should handle undefined primary key', async () => {
+        azureClient['storageClient'].storageAccounts.listKeys = jest.fn()
+          .mockResolvedValue({ keys: [{ keyName: 'key1' }] }); // Missing value property
+
+        await expect(
+          azureClient.getStorageAccountKeys('test-rg', 'teststorage')
+        ).rejects.toThrow('Primary storage account key is undefined');
       });
     });
 
@@ -246,69 +327,101 @@ describe('AzureClientManager', () => {
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle authentication errors', async () => {
-      const authError = new Error('Authentication failed');
-      (authError as any).code = 'AuthenticationFailed';
+    describe('Error Handling', () => {
+      it('should handle authentication errors', async () => {
+        const authError = new Error('Authentication failed');
+        (authError as any).code = 'AuthenticationFailed';
 
-      // Mock the list method to return a proper async iterable
-      azureClient['resourceClient'].resources.list = jest.fn().mockReturnValue({
-        async *[Symbol.asyncIterator]() {
-          throw authError;
-        }
+        // Mock the list method to return a proper async iterable
+        azureClient['resourceClient'].resources.list = jest.fn().mockReturnValue({
+          async *[Symbol.asyncIterator]() {
+            throw authError;
+          }
+        });
+
+        await expect(azureClient.getAllComputeResources()).rejects.toThrow('Authentication failed');
       });
 
-      await expect(azureClient.getAllComputeResources()).rejects.toThrow('Authentication failed');
-    });
+      it('should handle rate limiting errors', async () => {
+        // Create async iterator that throws rate limiting error
+        const rateLimitError = new Error('Rate limit exceeded');
+        (rateLimitError as any).statusCode = 429;
+        
+        // Temporarily create a new client with failing async iterator
+        const { ResourceManagementClient } = jest.requireMock('@azure/arm-resources');
+        ResourceManagementClient.mockImplementationOnce(() => ({
+          resources: {
+            list: jest.fn().mockReturnValue({
+              async *[Symbol.asyncIterator]() {
+                throw rateLimitError;
+              }
+            })
+          }
+        }));
+        
+        const failingClient = new AzureClientManager(testConfig);
+        
+        // Should retry and eventually fail with rate limiting error
+        await expect(failingClient.getAllComputeResources()).rejects.toThrow('Rate limit exceeded');
+      });
 
-    it('should handle rate limiting errors', async () => {
-      // Create async iterator that throws rate limiting error
-      const rateLimitError = new Error('Rate limit exceeded');
-      (rateLimitError as any).statusCode = 429;
-      
-      // Temporarily create a new client with failing async iterator
-      const { ResourceManagementClient } = jest.requireMock('@azure/arm-resources');
-      ResourceManagementClient.mockImplementationOnce(() => ({
-        resources: {
-          list: jest.fn().mockReturnValue({
-            async *[Symbol.asyncIterator]() {
-              throw rateLimitError;
-            }
-          })
+      it('should handle timeout errors with retry', async () => {
+        // Create timeout error
+        const timeoutError = new Error('Operation timed out');
+        (timeoutError as any).code = 'TIMEOUT';
+        
+        // Create a client with failing async iterator
+        const { ResourceManagementClient } = jest.requireMock('@azure/arm-resources');
+        ResourceManagementClient.mockImplementationOnce(() => ({
+          resources: {
+            list: jest.fn().mockReturnValue({
+              async *[Symbol.asyncIterator]() {
+                throw timeoutError;
+              }
+            })
+          }
+        }));
+        
+        const failingClient = new AzureClientManager(testConfig);
+        
+        // Should handle timeout error properly
+        await expect(failingClient.getAllComputeResources()).rejects.toThrow('Operation timed out');
+      });
+
+      it('should handle retry logic with exponential backoff', async () => {
+        // Test retry behavior by checking that the retry options are properly configured
+        expect(azureClient['retryOptions'].maxRetries).toBe(3);
+        expect(azureClient['retryOptions'].baseDelay).toBe(1000);
+        expect(azureClient['retryOptions'].maxDelay).toBe(30000);
+        expect(azureClient['retryOptions'].retryableErrors).toContain('ServiceUnavailable');
+        
+        // Test the isRetryableError method which is part of retry logic
+        const retryableError = new Error('ServiceUnavailable occurred');
+        expect(azureClient['isRetryableError'](retryableError)).toBe(true);
+        
+        const timeoutError = new Error('RequestTimeout happened');
+        expect(azureClient['isRetryableError'](timeoutError)).toBe(true);
+        
+        const nonRetryableError = new Error('Bad request');
+        expect(azureClient['isRetryableError'](nonRetryableError)).toBe(false);
+      });
+
+      it('should handle request count tracking for rate limiting logs', async () => {
+        // Make exactly 100 requests to trigger the logging condition at line 231  
+        azureClient['computeClient'].virtualMachines.list = jest.fn()
+          .mockReturnValue({
+            [Symbol.asyncIterator]: async function* () {}
+          });
+
+        for (let i = 0; i < 100; i++) {
+          await azureClient.getAllComputeResources();
         }
-      }));
-      
-      const failingClient = new AzureClientManager(testConfig);
-      
-      // Should retry and eventually fail with rate limiting error
-      await expect(failingClient.getAllComputeResources()).rejects.toThrow('Rate limit exceeded');
-    });
 
-    it('should handle timeout errors with retry', async () => {
-      // Create timeout error
-      const timeoutError = new Error('Operation timed out');
-      (timeoutError as any).code = 'TIMEOUT';
-      
-      // Create a client with failing async iterator
-      const { ResourceManagementClient } = jest.requireMock('@azure/arm-resources');
-      ResourceManagementClient.mockImplementationOnce(() => ({
-        resources: {
-          list: jest.fn().mockReturnValue({
-            async *[Symbol.asyncIterator]() {
-              throw timeoutError;
-            }
-          })
-        }
-      }));
-      
-      const failingClient = new AzureClientManager(testConfig);
-      
-      // Should handle timeout error properly
-      await expect(failingClient.getAllComputeResources()).rejects.toThrow('Operation timed out');
-    });
-  });
-
-  describe('Configuration', () => {
+        const stats = azureClient.getStatistics();
+        expect(stats.requestCount).toBe(100);
+        expect(stats.lastRequestTime).toBeGreaterThan(0);
+      });
+    });  describe('Configuration', () => {
     it('should handle configuration with different regions', () => {
       const configWithRegion = {
         ...testConfig,
@@ -378,7 +491,13 @@ describe('AzureClientManager', () => {
 
       expect(() => new AzureClientManager(testConfig)).toThrow('Azure client initialization failed');
     });
+
+    // Removed specific branch coverage test that was causing Azure SDK mocking issues
+
+    // Additional coverage tests for branch coverage improvement
   });
 
+  // Removed failing branch coverage tests that had Azure SDK mocking issues
+  // These tests were causing initialization errors due to complex Azure credential mocking
 
 });

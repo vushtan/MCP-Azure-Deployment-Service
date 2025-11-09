@@ -9,8 +9,11 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "test": "jest",
+    "test:unit": "jest --testPathPattern=\"tests/.*\\.test\\.ts$\"",
+    "test:integration": "jest tests/integration --passWithNoTests",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
+    "test:ci": "jest --ci --coverage --watchAll=false --passWithNoTests",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
@@ -18,7 +21,12 @@
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist coverage",
     "prebuild": "npm run clean && npm run typecheck && npm run lint",
-    "prestart": "npm run build"
+    "prestart": "npm run build",
+    "health-check": "tsx scripts/health-check.ts",
+    "test-credentials": "tsx scripts/test-credentials.ts",
+    "validate-config": "tsx scripts/validate-config.ts",
+    "setup-env": "tsx scripts/setup-env.ts",
+    "sample-deploy": "tsx scripts/sample-deploy.ts"
   },
   "keywords": [
     "mcp",
