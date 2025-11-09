@@ -1,0 +1,90 @@
+{
+  "name": "mcp-azure-deployment-service",
+  "version": "1.0.0",
+  "description": "Production-ready MCP server for Azure deployments with comprehensive resource management capabilities",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "prepare": "husky install",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist coverage",
+    "prebuild": "npm run clean && npm run typecheck && npm run lint",
+    "prestart": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "azure",
+    "deployment",
+    "server",
+    "model-context-protocol",
+    "infrastructure",
+    "devops",
+    "cloud"
+  ],
+  "author": "vushtan",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@azure/arm-compute": "^21.0.0",
+    "@azure/arm-resources": "^5.2.0",
+    "@azure/arm-storage": "^18.1.0",
+    "@azure/arm-appservice": "^14.0.0",
+    "@azure/identity": "^4.0.1",
+    "@azure/storage-blob": "^12.17.0",
+    "dotenv": "^16.3.1",
+    "joi": "^17.11.0",
+    "winston": "^3.11.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.9.0",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.1.0",
+    "prettier": "^3.1.0",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.1",
+    "tsx": "^4.1.4",
+    "typescript": "^5.2.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vushtan/MCP-Azure-Deployment-Service.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vushtan/MCP-Azure-Deployment-Service/issues"
+  },
+  "homepage": "https://github.com/vushtan/MCP-Azure-Deployment-Service#readme"
+}
